@@ -3,6 +3,7 @@ import sqlite3
 from telegram.ext import Application
 
 import config
+from config import ServiceConfig as config
 from db import EpicRepo, TaskRepo
 
 application = (

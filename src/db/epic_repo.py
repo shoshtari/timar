@@ -25,19 +25,17 @@ class EpicRepo(IEpicRepo):
 
     def migrate(self) -> None:
         stmt = """
-        CREATE TABLE IF NOT EXISTS tasks (
+        CREATE TABLE IF NOT EXISTS epic (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
-            description TEXT NOT NULL,
-            epic_id INTEGER NOT NULL,
-            FOREIGN KEY(epic_id) REFERENCES epics(id)
+            description TEXT NOT NULL
         );
         """
         self.sqlitedb.execute(stmt)
 
     def create(self, epic: Epic) -> int:
         stmt = """
-        INSERT INTO epics (name, description)
+        INSERT INTO epic (name, description)
         VALUES (?, ?)
         """
         cursor = self.sqlitedb.cursor()
