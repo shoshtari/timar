@@ -1,15 +1,15 @@
 import sqlite3
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
 
 
 @dataclass
 class Task:
-    id: int
     name: str
     description: str
     epic_id: int
+    id: Optional[int] = None
 
 
 class ITaskRepo(ABC):
