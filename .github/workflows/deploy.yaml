@@ -1,0 +1,55 @@
+name: deploy
+
+on:
+  workflow_run:
+    workflows: ["build"]
+    branches: [main]
+    types:
+      - completed
+
+jobs:
+  deploy:
+    runs-on: ubuntu-22.04
+    environment:  SE shared
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+
+      - name: set tag
+        run: |
+          old_tag=dev$(git log --oneline | head -n 1 | cut -d " " -f 1)
+          new_tag=$(git tag | sort -V | tail -n 1 )
+          echo "old_tag=$old_tag" >> $GITHUB_ENV
+          echo "new_tag=$new_tag" >> $GITHUB_ENV
+
+      - name: deploy
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USER }}
+          key: ${{ secrets.PROD_KEY }}
+          port: ${{ secrets.PROD_PORT }}
+          script: |
+            set -e
+            set +x
+            cd /opt/nocodi_backend
+            git pull
+            docker compose -f compose.yaml up -d --build
+      - name: notify
+        run: |
+          message="🚀Nocodi backend deployed"
+          message="$message\n👤 Author: ${{ github.event.workflow_run.head_commit.author.name }}"
+          message="$message\n📝 Commit Message: ${{ github.event.workflow_run.head_commit.message }}"
+          message="$message\n🔍 Commit Hash: ${{ github.event.workflow_run.head_commit.id }}"
+
+          curl -s https://api.telegram.org/bot${{ secrets.TGBOT_TOKEN }}/sendMessage \
+          -d "{\"chat_id\":\"${{ secrets.TGCHAT_ID }}\", \"message_thread_id\": \"${{ secrets.TGMESSAGE_THREAD_ID }}\", \"text\": \"$message\"}" \
+              -H 'Content-Type: Application/Json'
