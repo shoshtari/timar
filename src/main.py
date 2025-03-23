@@ -8,6 +8,12 @@ from config import ServiceConfig
 from db import EpicRepo, TaskRepo
 
 logging.basicConfig(level=logging.DEBUG)
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+logging.getLogger("telegram.ext.ExtBot").setLevel(logging.WARNING)
+logging.getLogger("telegram.ext.Updater").setLevel(logging.WARNING)
+logging.getLogger("telegram.ext").setLevel(logging.INFO)
+
 application = (
     Application.builder()
     .token(ServiceConfig.TOKEN)

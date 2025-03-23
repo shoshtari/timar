@@ -1,0 +1,21 @@
+#!/bin/bash
+function calc_hash(){
+	hash="$(cat $(find . -name "*.py")  | md5sum | cut -d ' ' -f 1)"
+	echo $hash
+}
+
+while true; do
+	new_hash=$(calc_hash)
+	if [[ $new_hash != $last_hash ]]; then
+		echo "RELOADING..."
+		if [[ -n $PYTHON_PID ]]; then
+			echo Killing $PYTHON_PID
+			kill $PYTHON_PID
+		fi
+		python main.py &
+		PYTHON_PID=$!
+		echo "RELOADED. new pid is $PYTHON_PID"
+	fi
+	last_hash=$new_hash
+	sleep 0.1
+done

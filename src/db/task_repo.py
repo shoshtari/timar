@@ -26,7 +26,7 @@ class TaskRepo(ITaskRepo):
 
     def migrate(self) -> None:
         stmt = """
-        CREATE TABLE IF NOT EXISTS tasks (
+        CREATE TABLE IF NOT EXISTS task (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
             description TEXT NOT NULL,
@@ -38,7 +38,7 @@ class TaskRepo(ITaskRepo):
 
     def create(self, task: Task) -> int:
         stmt = """
-        INSERT INTO tasks (name, description, epic_id)
+        INSERT INTO task (name, description, epic_id)
         VALUES (?, ?, ?)
         """
         cursor = self.sqlitedb.cursor()
@@ -47,3 +47,17 @@ class TaskRepo(ITaskRepo):
         if out is None:
             raise ValueError("couldn't get id of inserted row")
         return out
+
+    def get_by_chat_id(self, chat_id: int) -> List[Task]:
+        stmt = """
+        SELECT id, name, description, epic_id
+        FROM task
+        WHERE epic_id IN
+        (SELECT id FROM epic WHERE chat_id = ?)
+        """
+        cursor = self.sqlitedb.cursor()
+        cursor.execute(stmt, (chat_id,))
+        return [
+            Task(id=row[0], name=row[1], description=row[2], epic_id=row[3])
+            for row in cursor.fetchall()
+        ]
