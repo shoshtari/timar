@@ -5,7 +5,7 @@ from telegram.ext import Application
 
 import bot
 from config import ServiceConfig
-from db import EpicRepo, TaskRepo
+from db import EpicRepo, TaskRepo, UserStateRepo
 
 logging.basicConfig(level=logging.DEBUG)
 logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -25,5 +25,6 @@ application = (
 sqlitedb = sqlite3.connect(ServiceConfig.SQLITE_FILE, timeout=1)
 task_repo = TaskRepo(sqlitedb=sqlitedb, do_migrate=ServiceConfig.MIGRATION)
 epic_repo = EpicRepo(sqlitedb=sqlitedb, do_migrate=ServiceConfig.MIGRATION)
+user_state_repo = UserStateRepo(sqlitedb=sqlitedb, do_migrate=ServiceConfig.MIGRATION)
 
 bot.TimarBot(task_repo, epic_repo, application).run()

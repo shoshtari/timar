@@ -13,7 +13,10 @@ from telegram.ext import (
 )
 
 import callback_consts
-from db import Epic, IEpicRepo, ITaskRepo, Task
+import message_consts
+from db import Epic, IEpicRepo, ITaskRepo, IUserStateRepo, Task, UserState
+
+logger = logging.getLogger(__name__)
 
 
 class TimarBot:
@@ -21,10 +24,12 @@ class TimarBot:
         self,
         epic_repo: IEpicRepo,
         task_repo: ITaskRepo,
+        user_state_repo: IUserStateRepo,
         application: Application,
     ):
         self.epic_repo = epic_repo
         self.task_repo = task_repo
+        self.user_state_repo = user_state_repo
         self.application: Application = application
 
     async def send_message(
@@ -56,7 +61,7 @@ class TimarBot:
         reply_markup = {
             "inline_keyboard": [
                 [
-                    callback_consts.EPIC_MANAGEMENT.button(chat_id),
+                    callback_consts.EPICS_MANAGEMENT.button(chat_id),
                     callback_consts.TASK_MANAGEMENT.button(chat_id),
                 ],
             ],
@@ -76,19 +81,45 @@ class TimarBot:
     ) -> None:
         chat_id = update.callback_query.message.chat.id
         user_epics = self.epic_repo.get_by_chat_id(chat_id)
+
+        if user_epics:
+            text = message_consts.MANAGE_EPIC_MESSAGE
+        else:
+            text = message_consts.MANAGE_EPIC_EMPTY_MESSAGE
+
+        buttons = []
+        for epic in user_epics:
+            button = callback_consts.EDIT_EPIC.copy()
+            button.add_metadata({"epic_id": epic.id})
+            button.set_text(epic.name)
+            buttons.append(button)
+
         reply_markup = {
-            "inline_keyboard": [
-                [
-                    callback_consts.CREATE_EPIC.button(chat_id),
-                    callback_consts.LIST_EPIC.button(chat_id),
-                ],
-            ],
+            "inline_keyboard": callback_consts.CallbackButton.aggregate(
+                buttons,
+                update.effective_chat.id,
+            ),
         }
+
         await self.send_message(
             context,
             chat_id=chat_id,
-            text="مدیریت اپیک",
+            text=text,
             reply_markup=reply_markup,
+        )
+
+    async def handle_new_epic(
+        self,
+        update: Update,
+        context: ContextTypes.DEFAULT_TYPE,
+    ) -> None:
+        chat_id = update.message.chat.id
+        text = message_consts.NEW_EPIC_MESSAGE
+        self.user_state_repo.set_state(chat_id, UserState.CREATE_EPIC)
+        await self.send_message(
+            context,
+            chat_id=chat_id,
+            text=text,
         )
 
     async def handle_task_management(
@@ -98,6 +129,51 @@ class TimarBot:
     ) -> None:
         raise NotImplementedError
 
+    async def handle_create_epic(
+        self,
+        update: Update,
+        context: ContextTypes.DEFAULT_TYPE,
+    ) -> None:
+        text = update.message.text.split("\n")
+        title = text[0].strip()
+
+        if len(text) > 1:
+            description = "\n".join(text[1:]).strip()
+        else:
+            description = ""
+        chat_id = update.message.chat.id
+
+        self.epic_repo.create(
+            Epic(name=title, description=description, chat_id=chat_id),
+        )
+        self.user_state_repo.set_state(chat_id, UserState.NORMAL)
+        await self.send_message(
+            context,
+            chat_id=chat_id,
+            text=message_consts.NEW_EPIC_CREATED_MESSAGE,
+        )
+
+    async def handle_new_task(
+        self,
+        update: Update,
+        context: ContextTypes.DEFAULT_TYPE,
+    ) -> None:
+        raise NotADirectoryError
+
+    async def handle_state(
+        self,
+        update: Update,
+        context: ContextTypes.DEFAULT_TYPE,
+    ) -> None:
+        user_state = self.user_state_repo.get_state(update.message.chat.id)
+        match user_state:
+            case UserState.CREATE_EPIC:
+                await self.handle_create_epic(update, context)
+            case UserState.CREATE_TASK:
+                await self.handle_new_task(update, context)
+            case UserState.NORMAL:
+                logger.warning(f"unknown message {update.message.text}")
+
     async def handle_messages(
         self,
         update: Update,
@@ -106,6 +182,10 @@ class TimarBot:
         match update.message.text:
             case "/start":
                 await self.handle_start_command(update, context)
+            case "/new_epic":
+                await self.handle_new_epic(update, context)
+            case _:
+                await self.handle_state(update, context)
 
     async def handle_callback(
         self,
@@ -115,10 +195,12 @@ class TimarBot:
         query = update.callback_query
         data = json.loads(query.data)
         match data["action"]:
-            case callback_consts.EPIC_MANAGEMENT:
+            case callback_consts.EPICS_MANAGEMENT:
                 await self.handle_epic_management(update, context)
             case callback_consts.TASK_MANAGEMENT:
                 await self.handle_task_management(update, context)
+            case _:
+                logger.warning(f"Unknown action {data['action']}")
 
     def run(self) -> None:
         self.application.add_handler(
