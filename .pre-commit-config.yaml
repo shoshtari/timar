@@ -34,3 +34,12 @@ repos:
           - "--scripts-are-modules"
           - "--disallow-untyped-calls"
           - "--disallow-untyped-defs"
+
+  - repo: local
+    hooks:
+    -   id: tests
+        name: run tests
+        entry: pytest
+        language: system
+        pass_filenames: false
+        types: [python]
