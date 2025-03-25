@@ -17,6 +17,10 @@ class ITaskRepo(ABC):
     def create(self, task: Task) -> int:
         raise NotImplementedError
 
+    @abstractmethod
+    def get_by_chat_id(self, chat_id: int) -> List[Task]:
+        raise NotImplementedError
+
 
 class TaskRepo(ITaskRepo):
     def __init__(self, sqlitedb: sqlite3.Connection, do_migrate: bool):

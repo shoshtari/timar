@@ -127,7 +127,28 @@ class TimarBot:
         update: Update,
         context: ContextTypes.DEFAULT_TYPE,
     ) -> None:
-        raise NotImplementedError
+        chat_id = update.effective_chat.id
+        tasks = self.task_repo.get_by_chat_id(chat_id)
+        if not tasks:
+            await self.send_message(
+                context,
+                chat_id=chat_id,
+                text=message_consts.MANAGE_TASK_EMPTY_MESSAGE,
+            )
+        buttons = []
+        for task in tasks:
+            button = callback_consts.EDIT_TASK.copy()
+            button.add_metadata({"task_id": task.id})
+            button.set_text(task.name)
+            buttons.append(button)
+        buttons = callback_consts.CallbackButton.aggregate(buttons)
+        reply_markup = {"inline_keyboard": buttons}
+        await self.send_message(
+            context,
+            chat_id=chat_id,
+            text=message_consts.MANAGE_TASK_MESSAGE,
+            reply_markup=reply_markup,
+        )
 
     async def handle_create_epic(
         self,

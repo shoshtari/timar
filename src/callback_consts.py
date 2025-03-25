@@ -84,3 +84,5 @@ EPICS_MANAGEMENT = CallbackButton("مدیریت اپیک ها")
 
 EDIT_EPIC = CallbackButton("ویرایش و یا حذف اپیک")
 SELECT_EPIC_FOR_TASK = CallbackButton("انتخاب اپیک برای تسک")
+
+EDIT_TASK = CallbackButton("ویرایش و یا حذف تسک")
