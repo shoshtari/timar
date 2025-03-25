@@ -253,6 +253,73 @@ class TimarBot:
             text=message_consts.NEW_TASK_CREATED.format(name=title),
         )
 
+    async def handle_edit_epic(
+        self,
+        update: Update,
+        context: ContextTypes.DEFAULT_TYPE,
+        callback_data: dict,
+    ) -> None:
+        chat_id = update.effective_chat.id
+        epic_id = callback_data["epic_id"]
+        epic = self.epic_repo.get_by_id(epic_id)
+        text = message_consts.EDIT_EPIC.format(
+            name=epic.name,
+            description=epic.description,
+        )
+        buttons = callback_consts.CallbackButton.aggregate(
+            [
+                callback_consts.EDIT_EPIC_NAME.copy().add_metadata(
+                    {"epic_id": epic_id},
+                ),
+                callback_consts.EDIT_EPIC_DESCRIPTION.copy().add_metadata(
+                    {"epic_id": epic_id},
+                ),
+                callback_consts.DELETE_EPIC.copy().add_metadata({"epic_id": epic_id}),
+            ],
+            chat_id,
+        )
+        reply_markup = {"inline_keyboard": buttons}
+        await self.send_message(
+            context,
+            chat_id=chat_id,
+            text=text,
+            reply_markup=reply_markup,
+        )
+
+    async def handle_edit_task(
+        self,
+        update: Update,
+        context: ContextTypes.DEFAULT_TYPE,
+        callback_data: dict,
+    ) -> None:
+        chat_id = update.effective_chat.id
+        task_id = callback_data["task_id"]
+        task = self.task_repo.get_by_id(task_id)
+        text = message_consts.EDIT_TASK.format(
+            name=task.name,
+            description=task.description,
+        )
+        buttons = callback_consts.CallbackButton.aggregate(
+            [
+                callback_consts.EDIT_TASK_NAME.copy().add_metadata(
+                    {"task_id": task_id},
+                ),
+                callback_consts.EDIT_TASK_DESCRIPTION.copy().add_metadata(
+                    {"task_id": task_id},
+                ),
+                callback_consts.DELETE_TASK.copy().add_metadata({"task_id": task_id}),
+                callback_consts.TASK_TIMER.copy().add_metadata({"task_id": task_id}),
+            ],
+            chat_id,
+        )
+        reply_markup = {"inline_keyboard": buttons}
+        await self.send_message(
+            context,
+            chat_id=chat_id,
+            text=text,
+            reply_markup=reply_markup,
+        )
+
     async def handle_state(
         self,
         update: Update,
@@ -299,6 +366,11 @@ class TimarBot:
                 await self.handle_task_management(update, context)
             case callback_consts.SELECT_EPIC_FOR_TASK:
                 await self.handle_selected_epic_for_new_task(update, context, data)
+            case callback_consts.EDIT_EPIC:
+                await self.handle_edit_epic(update, context, data)
+            case callback_consts.EDIT_TASK:
+                await self.handle_edit_task(update, context, data)
+
             case _:
                 logger.warning(f"Unknown action {data['action']}")
 
