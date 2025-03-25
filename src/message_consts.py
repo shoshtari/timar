@@ -5,7 +5,7 @@ MANAGE_EPIC_MESSAGE = """
 """.strip()
 MANAGE_EPIC_EMPTY_MESSAGE = """
 *مدیریت اپیک*
-شما در حال خاضر هیچ اپیکی ندارید
+شما در حال حاضر هیچ اپیکی ندارید
 برای تعریف اپیک جدید دستور /new_epic را بفرستید
 """.strip()
 
@@ -45,4 +45,13 @@ SEND_TASK_TITLE_AND_DESCRIPTION = """
 
 NEW_TASK_CREATED = """
 تسک {name} با موفقیت ساخته شد.
+""".strip()
+
+EDIT_EPIC = """
+شما در حال دیدن مشخصات اپیک {name} هستید.
+توضیحات: {description}
+""".strip()
+
+EPIC_DELETED = """
+اپیک {name} باموفقیت حذف شد.
 """.strip()

@@ -1,7 +1,9 @@
 import sqlite3
+import zoneinfo
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import List, Optional
+from datetime import datetime
 
 
 @dataclass
@@ -17,7 +19,16 @@ class IEpicRepo(ABC):
     def create(self, e: Epic) -> int:
         raise NotImplementedError
 
+    @abstractmethod
+    def get_by_id(self, epic_id: int) -> Epic:
+        raise NotImplementedError
+
+    @abstractmethod
     def get_by_chat_id(self, chat_id: int) -> List[Epic]:
+        raise NotImplementedError
+
+    @abstractmethod
+    def delete(self, epic_id: int) -> None:
         raise NotImplementedError
 
 
@@ -33,7 +44,8 @@ class EpicRepo(IEpicRepo):
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             chat_id INTEGER,
             name TEXT NOT NULL,
-            description TEXT NOT NULL
+            description TEXT NOT NULL,
+            deleted_at TIMESTAMP DEFAULT NULL
         );
         """
         self.sqlitedb.execute(stmt)
@@ -55,7 +67,7 @@ class EpicRepo(IEpicRepo):
         stmt = """
         SELECT id, name, description
         FROM epic
-        WHERE chat_id = ?
+        WHERE chat_id = ? AND deleted_at IS NULL
         """
         cursor = self.sqlitedb.cursor()
         cursor.execute(stmt, (chat_id,))
@@ -72,3 +84,34 @@ class EpicRepo(IEpicRepo):
             )
         cursor.close()
         return epics.copy()
+
+    def get_by_id(self, epic_id: int) -> Epic:
+        stmt = """
+        SELECT chat_id, name, description
+        FROM epic
+        WHERE id = ? AND deleted_at IS NULL
+        """
+        cursor = self.sqlitedb.cursor()
+        cursor.execute(stmt, (epic_id,))
+        row = cursor.fetchone()
+        if row is None:
+            raise ValueError(f"epic with id {epic_id} not found")
+        return Epic(
+            id=epic_id,
+            chat_id=row[0],
+            name=row[1],
+            description=row[2],
+        )
+
+    def delete(self, epic_id: int) -> None:
+        stmt = """
+        UPDATE epic
+        SET deleted_at = ?
+        WHERE id = ?
+        """
+        cursor = self.sqlitedb.cursor()
+        cursor.execute(stmt, (datetime.now(zoneinfo.ZoneInfo("Asia/Tehran")).isoformat(), epic_id))
+        if cursor.rowcount == 0:
+            raise ValueError(f"epic with id {epic_id} not found or already deleted")
+        self.sqlitedb.commit()
+

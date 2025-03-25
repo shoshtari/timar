@@ -4,17 +4,20 @@ from typing import Any, List
 
 class CallbackButton:
 
-    def __init__(self, name: str):
+    def __init__(self, name: str, text: str = None):
+        if text is None:
+            text = name
         self.__name = name
         self.__metadata: dict = {}
-        self.__text = name
+        self.__text = text
 
     @property
     def name(self) -> str:
         return self.__name
 
-    def add_metadata(self, metadata: dict) -> None:
+    def add_metadata(self, metadata: dict) -> "CallbackButton":
         self.__metadata |= metadata
+        return self
 
     def set_text(self, text: str) -> None:
         self.__text = text
@@ -83,6 +86,13 @@ TASK_MANAGEMENT = CallbackButton("مدیریت تسک ها")
 EPICS_MANAGEMENT = CallbackButton("مدیریت اپیک ها")
 
 EDIT_EPIC = CallbackButton("ویرایش و یا حذف اپیک")
+
+EDIT_EPIC_NAME = CallbackButton("ویرایش نام اپیک", text="ویرایش نام")
+EDIT_EPIC_DESCRIPTION = CallbackButton("ویرایش توضیحات اپیک", text="ویرایش توضیحات")
+DELETE_EPIC = CallbackButton("حذف اپیک", text="حذف")
+
 SELECT_EPIC_FOR_TASK = CallbackButton("انتخاب اپیک برای تسک")
 
 EDIT_TASK = CallbackButton("ویرایش و یا حذف تسک")
+
+RETURN_TO_MENU = CallbackButton("بازگشت به منوی اصلی")

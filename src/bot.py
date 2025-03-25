@@ -42,6 +42,11 @@ class TimarBot:
     ) -> None:
         if reply_markup is None:
             reply_markup = {}
+        if "inline_keyboard" not in reply_markup:
+            reply_markup["inline_keyboard"] = callback_consts.CallbackButton.aggregate(
+                    [callback_consts.RETURN_TO_MENU],
+                    chat_id,
+                    )
         # if "reply_keyboard" not in reply_markup:
         #     reply_markup["reply_keyboard"] = ReplyKeyboardMarkup([["S"]])
 
@@ -57,12 +62,12 @@ class TimarBot:
         context: ContextTypes.DEFAULT_TYPE,
     ) -> None:
 
-        chat_id = update.message.chat.id
+        chat_id = update.effective_chat.id
         reply_markup = {
             "inline_keyboard": [
                 [
-                    callback_consts.EPICS_MANAGEMENT.button(chat_id),
                     callback_consts.TASK_MANAGEMENT.button(chat_id),
+                    callback_consts.EPICS_MANAGEMENT.button(chat_id),
                 ],
             ],
         }
@@ -84,22 +89,23 @@ class TimarBot:
 
         if user_epics:
             text = message_consts.MANAGE_EPIC_MESSAGE
+
+            buttons = []
+            for epic in user_epics:
+                button = callback_consts.EDIT_EPIC.copy()
+                button.add_metadata({"epic_id": epic.id})
+                button.set_text(epic.name)
+                buttons.append(button)
+
+            reply_markup = {
+                "inline_keyboard": callback_consts.CallbackButton.aggregate(
+                    buttons,
+                    update.effective_chat.id,
+                ),
+            }
         else:
             text = message_consts.MANAGE_EPIC_EMPTY_MESSAGE
-
-        buttons = []
-        for epic in user_epics:
-            button = callback_consts.EDIT_EPIC.copy()
-            button.add_metadata({"epic_id": epic.id})
-            button.set_text(epic.name)
-            buttons.append(button)
-
-        reply_markup = {
-            "inline_keyboard": callback_consts.CallbackButton.aggregate(
-                buttons,
-                update.effective_chat.id,
-            ),
-        }
+            reply_markup = None
 
         await self.send_message(
             context,
@@ -141,7 +147,7 @@ class TimarBot:
             button.add_metadata({"task_id": task.id})
             button.set_text(task.name)
             buttons.append(button)
-        buttons = callback_consts.CallbackButton.aggregate(buttons)
+        buttons = callback_consts.CallbackButton.aggregate(buttons, chat_id = chat_id)
         reply_markup = {"inline_keyboard": buttons}
         await self.send_message(
             context,
@@ -319,13 +325,30 @@ class TimarBot:
             text=text,
             reply_markup=reply_markup,
         )
+    async def handle_delete_epic(
+        self,
+        update: Update,
+        context: ContextTypes.DEFAULT_TYPE,
+        epic_id: int,
+        ) -> None:
+        epic = self.epic_repo.get_by_id(epic_id)
+        if epic.chat_id != update.effective_chat.id:
+            logger.warning(f"User {update.effective_chat.id} tried to delete epic {epic_id} which is not theirs")
+            return
+        self.epic_repo.delete(epic_id)
+        await self.send_message(
+            context,
+            chat_id=update.effective_chat.id,
+            text=message_consts.EPIC_DELETED.format(name=epic.name),
+        )
+
 
     async def handle_state(
         self,
         update: Update,
         context: ContextTypes.DEFAULT_TYPE,
     ) -> None:
-        user_state = self.user_state_repo.get_state(update.message.chat.id)
+        user_state = self.user_state_repo.get_state(update.effective_chat.id)
         match user_state:
             case UserState.CREATE_EPIC:
                 await self.handle_create_epic(update, context)
@@ -348,6 +371,7 @@ class TimarBot:
                 await self.handle_new_task(update, context)
             case _:
                 await self.handle_state(update, context)
+                return
 
     async def handle_callback(
         self,
@@ -371,6 +395,11 @@ class TimarBot:
             case callback_consts.EDIT_TASK:
                 await self.handle_edit_task(update, context, data)
 
+            case callback_consts.RETURN_TO_MENU:
+                await self.handle_start_command(update, context)
+            case callback_consts.DELETE_EPIC:
+                epic_id = data["epic_id"]
+                await self.handle_delete_epic(update, context, epic_id)
             case _:
                 logger.warning(f"Unknown action {data['action']}")
 

@@ -1,24 +1,39 @@
 import sqlite3
-
+import pytest
 from .epic_repo import Epic, EpicRepo
 
 
-def test_epic_repo() -> None:
-    sqlitedb = sqlite3.connect(":memory:")
-    epic_repo = EpicRepo(sqlitedb=sqlitedb, do_migrate=True)
+@pytest.fixture
+def repo():
+    conn = sqlite3.connect(':memory:')
+    repo = EpicRepo(conn, do_migrate=True)
+    yield repo
+    conn.close()
 
-    epic = Epic(name="test", description="test", chat_id=2)
-    epic_id = epic_repo.create(epic)
-    assert epic_id > 0
-    assert epic_id is not None
-    assert isinstance(epic_id, int)
 
-    epics = epic_repo.get_by_chat_id(3)
-    assert len(epics) == 0
+def test_create_and_fetch_epic(repo):
+    epic = Epic(name="Test Epic", description="Test Description", chat_id=123)
+    epic_id = repo.create(epic)
+    
+    retrieved_epic = repo.get_by_id(epic_id)
+    assert retrieved_epic.id == epic_id
+    assert retrieved_epic.name == epic.name
+    assert retrieved_epic.description == epic.description
+    assert retrieved_epic.chat_id == epic.chat_id
 
-    epics = epic_repo.get_by_chat_id(2)
-    assert len(epics) == 1
-    assert epics[0].id == epic_id
-    assert epics[0].name == epic.name
-    assert epics[0].description == epic.description
-    assert epics[0].chat_id == epic.chat_id
+
+def test_delete_logic(repo):
+    epic = Epic(name="Test Epic", description="Test Description", chat_id=123)
+    epic_id = repo.create(epic)
+    
+    retrieved_epic = repo.get_by_id(epic_id)
+    assert retrieved_epic is not None
+    
+    repo.delete(epic_id)
+    
+    with pytest.raises(ValueError):
+        repo.get_by_id(epic_id)
+    
+    epics = repo.get_by_chat_id(123)
+    assert epic_id not in [e.id for e in epics]
+
