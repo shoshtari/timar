@@ -27,4 +27,4 @@ task_repo = TaskRepo(sqlitedb=sqlitedb, do_migrate=ServiceConfig.MIGRATION)
 epic_repo = EpicRepo(sqlitedb=sqlitedb, do_migrate=ServiceConfig.MIGRATION)
 user_state_repo = UserStateRepo(sqlitedb=sqlitedb, do_migrate=ServiceConfig.MIGRATION)
 
-bot.TimarBot(task_repo, epic_repo, application).run()
+bot.TimarBot(epic_repo, task_repo, user_state_repo, application).run()

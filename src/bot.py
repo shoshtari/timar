@@ -150,7 +150,7 @@ class TimarBot:
         await self.send_message(
             context,
             chat_id=chat_id,
-            text=message_consts.NEW_EPIC_CREATED_MESSAGE,
+            text=message_consts.NEW_EPIC_CREATED.format(name=title),
         )
 
     async def handle_new_task(
@@ -158,7 +158,79 @@ class TimarBot:
         update: Update,
         context: ContextTypes.DEFAULT_TYPE,
     ) -> None:
-        raise NotADirectoryError
+        chat_id = update.message.chat.id
+        text = update.message.text.split("\n")
+        title = text[0].strip()
+
+        user_epics = self.epic_repo.get_by_chat_id(chat_id)
+        if not user_epics:
+            await self.send_message(
+                context,
+                chat_id=chat_id,
+                text=message_consts.NO_EPIC_MESSAGE,
+            )
+            return
+
+        buttons = []
+        for epic in user_epics:
+            button = callback_consts.SELECT_EPIC_FOR_TASK.copy()
+            button.add_metadata({"epic_id": epic.id})
+            button.set_text(epic.name)
+            buttons.append(button)
+
+        reply_markup = {
+            "inline_keyboard": callback_consts.CallbackButton.aggregate(
+                buttons,
+                chat_id,
+            ),
+        }
+        await self.send_message(
+            context,
+            chat_id=chat_id,
+            text=message_consts.SELECT_EPIC_FOR_NEW_TASK,
+            reply_markup=reply_markup,
+        )
+
+    async def handle_selected_epic_for_new_task(
+        self,
+        update: Update,
+        context: ContextTypes.DEFAULT_TYPE,
+        callback_data: dict,
+    ) -> None:
+        # should go to set title and description
+        self.user_state_repo.set_state(
+            update.effective_chat.id,
+            UserState.CREATE_TASK,
+            metadata={"epic_id": callback_data["epic_id"]},
+        )
+        await self.send_message(
+            context,
+            chat_id=update.effective_chat.id,
+            text=message_consts.SEND_TASK_TITLE_AND_DESCRIPTION,
+        )
+
+    async def handle_create_task(
+        self,
+        update: Update,
+        context: ContextTypes.DEFAULT_TYPE,
+    ) -> None:
+        text = update.message.text.split("\n")
+        chat_id = update.effective_chat.id
+        metadata = self.user_state_repo.get_state_and_metadata(chat_id)[1]
+
+        title = text[0].strip()
+        description = "\n".join(text[1:]).strip()
+        chat_id = update.message.chat.id
+        epic_id = metadata["epic_id"]
+        self.task_repo.create(
+            Task(name=title, description=description, epic_id=epic_id),
+        )
+        self.user_state_repo.set_state(chat_id, UserState.NORMAL)
+        await self.send_message(
+            context,
+            chat_id=chat_id,
+            text=message_consts.NEW_TASK_CREATED.format(name=title),
+        )
 
     async def handle_state(
         self,
@@ -170,7 +242,7 @@ class TimarBot:
             case UserState.CREATE_EPIC:
                 await self.handle_create_epic(update, context)
             case UserState.CREATE_TASK:
-                await self.handle_new_task(update, context)
+                await self.handle_create_task(update, context)
             case UserState.NORMAL:
                 logger.warning(f"unknown message {update.message.text}")
 
@@ -184,6 +256,8 @@ class TimarBot:
                 await self.handle_start_command(update, context)
             case "/new_epic":
                 await self.handle_new_epic(update, context)
+            case "/new_task":
+                await self.handle_new_task(update, context)
             case _:
                 await self.handle_state(update, context)
 
@@ -193,12 +267,17 @@ class TimarBot:
         context: ContextTypes.DEFAULT_TYPE,
     ) -> None:
         query = update.callback_query
-        data = json.loads(query.data)
+        try:
+            data = json.loads(query.data)
+        except Exception as error:
+            logger.error(f"Error parsing callback data: {error =}, {query.data}")
         match data["action"]:
             case callback_consts.EPICS_MANAGEMENT:
                 await self.handle_epic_management(update, context)
             case callback_consts.TASK_MANAGEMENT:
                 await self.handle_task_management(update, context)
+            case callback_consts.SELECT_EPIC_FOR_TASK:
+                await self.handle_selected_epic_for_new_task(update, context, data)
             case _:
                 logger.warning(f"Unknown action {data['action']}")
 

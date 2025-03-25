@@ -46,9 +46,9 @@ class EpicRepo(IEpicRepo):
         cursor = self.sqlitedb.cursor()
         cursor.execute(stmt, (epic.chat_id, epic.name, epic.description))
         out = cursor.lastrowid
-        cursor.close()
         if out is None:
             raise ValueError("couldn't get id of inserted row")
+        self.sqlitedb.commit()
         return out
 
     def get_by_chat_id(self, chat_id: int) -> List[Epic]:
@@ -71,5 +71,4 @@ class EpicRepo(IEpicRepo):
                 ),
             )
         cursor.close()
-        print(epics)
         return epics.copy()

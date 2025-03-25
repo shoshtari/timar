@@ -1,5 +1,5 @@
 import json
-from typing import Any
+from typing import Any, List
 
 
 class CallbackButton:
@@ -18,6 +18,10 @@ class CallbackButton:
 
     def set_text(self, text: str) -> None:
         self.__text = text
+
+    @property
+    def text(self) -> str:
+        return self.__text
 
     def __get_callback_data(self, chat_id: int) -> str:
         return json.dumps(
@@ -43,7 +47,7 @@ class CallbackButton:
 
         raise NotImplementedError
 
-    def __copy__(self) -> "CallbackButton":
+    def copy(self) -> "CallbackButton":
         new_button = CallbackButton(self.__name)
         if self.__metadata:
             new_button.add_metadata(self.__metadata.copy())
@@ -53,28 +57,30 @@ class CallbackButton:
 
     @staticmethod
     def aggregate(
-        buttons: list,
+        input_buttons: list,
         chat_id: int,
         row_limit: int = 15,
         max_count: int = 2,
     ) -> list:
-        buttons = []
-        for button in buttons:
+        inline_buttons: List[List[dict]] = []
+        last_row_remain = 0
+
+        for button in input_buttons:
             but = button.button(chat_id=chat_id)
             if not isinstance(button, CallbackButton):
                 raise ValueError("All buttons must be of type CallbackButton")
-            if (
-                len(buttons) == 0
-                or len(button.name) > row_limit
-                or len(buttons[-1]) >= max_count
-            ):
-                buttons.append(but)
-            else:
-                buttons[-1].append(but)
-        return buttons
+            last_row_remain -= len(button.text)
+            if last_row_remain < 0 or len(inline_buttons[-1]) >= max_count:
+                inline_buttons.append([])
+                last_row_remain = row_limit
+            inline_buttons[-1].append(but)
+            last_row_remain -= len(button.text)
+
+        return inline_buttons
 
 
 TASK_MANAGEMENT = CallbackButton("مدیریت تسک ها")
 EPICS_MANAGEMENT = CallbackButton("مدیریت اپیک ها")
 
 EDIT_EPIC = CallbackButton("ویرایش و یا حذف اپیک")
+SELECT_EPIC_FOR_TASK = CallbackButton("انتخاب اپیک برای تسک")
