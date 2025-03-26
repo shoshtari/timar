@@ -55,3 +55,22 @@ EDIT_EPIC = """
 EPIC_DELETED = """
 اپیک {name} باموفقیت حذف شد.
 """.strip()
+TASK_OPERATION_MENU = """
+شما در حال مشاهده تسک {name} هستید.
+توضیحات:‌{description}
+"""
+
+UNAUTHORIZED = """
+شما اجازه انجام این عمل را ندارید.
+"""
+
+TASK_DELETED = """
+تسک {name} با موفقیت حذف شد
+"""
+
+TASK_EDITED = """
+تسک با موفقیت بروزرسانی شد.
+"""
+GET_INPUT_FOR_TASK_EDIT = """
+مقدار جدید را وارد کنید.
+"""

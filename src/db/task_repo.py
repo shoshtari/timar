@@ -21,6 +21,22 @@ class ITaskRepo(ABC):
     def get_by_chat_id(self, chat_id: int) -> List[Task]:
         raise NotImplementedError
 
+    @abstractmethod
+    def get_by_id(self, task_id: int) -> Task:
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_owner_chat(self, task_id: int) -> int:
+        raise NotImplementedError
+
+    @abstractmethod
+    def delete(self, task_id: int) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def edit(self, id: int, col: str, value: str) -> None:
+        raise NotImplementedError
+
 
 class TaskRepo(ITaskRepo):
     def __init__(self, sqlitedb: sqlite3.Connection, do_migrate: bool):
@@ -50,6 +66,7 @@ class TaskRepo(ITaskRepo):
         out = cursor.lastrowid
         if out is None:
             raise ValueError("couldn't get id of inserted row")
+        self.sqlitedb.commit()
         return out
 
     def get_by_chat_id(self, chat_id: int) -> List[Task]:
@@ -65,3 +82,47 @@ class TaskRepo(ITaskRepo):
             Task(id=row[0], name=row[1], description=row[2], epic_id=row[3])
             for row in cursor.fetchall()
         ]
+
+    def get_by_id(self, task_id: int) -> Task:
+        stmt = """
+        SELECT id, name, description, epic_id
+        FROM task
+        WHERE id = ?
+        """
+        cursor = self.sqlitedb.cursor()
+        cursor.execute(stmt, (task_id,))
+        row = cursor.fetchone()
+        if row is None:
+            raise ValueError("task not found")
+        return Task(id=row[0], name=row[1], description=row[2], epic_id=row[3])
+
+    def get_owner_chat(self, task_id: int) -> int:
+        stmt = """
+        SELECT chat_id
+        FROM epic
+        WHERE id = (
+            SELECT epic_id
+            FROM task
+            WHERE id = ?
+        )
+        """
+        cursor = self.sqlitedb.cursor()
+        cursor.execute(stmt, (task_id,))
+        row = cursor.fetchone()
+        if row is None:
+            raise ValueError("task not found")
+        return row[0]
+
+    def delete(self, task_id: int) -> None:
+        stmt = """
+DELETE FROM task WHERE id = ?
+"""
+        self.sqlitedb.execute(stmt, (task_id,))
+        self.sqlitedb.commit()
+
+    def edit(self, id: int, col: str, value: str) -> None:
+        if col not in ("name", "description"):
+            raise ValueError(f"invalid column: {col}")
+        stmt = f"UPDATE task SET {col} = ? WHERE id = ?"
+        self.sqlitedb.execute(stmt, (value, id))
+        self.sqlitedb.commit()

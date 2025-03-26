@@ -1,10 +1,10 @@
 import json
-from typing import Any, List
+from typing import Any, List, Optional
 
 
 class CallbackButton:
 
-    def __init__(self, name: str, text: str = None):
+    def __init__(self, name: str, text: Optional[str] = None):
         if text is None:
             text = name
         self.__name = name
@@ -19,8 +19,9 @@ class CallbackButton:
         self.__metadata |= metadata
         return self
 
-    def set_text(self, text: str) -> None:
+    def set_text(self, text: str) -> "CallbackButton":
         self.__text = text
+        return self
 
     @property
     def text(self) -> str:
@@ -69,9 +70,9 @@ class CallbackButton:
         last_row_remain = 0
 
         for button in input_buttons:
-            but = button.button(chat_id=chat_id)
             if not isinstance(button, CallbackButton):
                 raise ValueError("All buttons must be of type CallbackButton")
+            but = button.button(chat_id=chat_id)
             last_row_remain -= len(button.text)
             if last_row_remain < 0 or len(inline_buttons[-1]) >= max_count:
                 inline_buttons.append([])
@@ -93,6 +94,11 @@ DELETE_EPIC = CallbackButton("حذف اپیک", text="حذف")
 
 SELECT_EPIC_FOR_TASK = CallbackButton("انتخاب اپیک برای تسک")
 
-EDIT_TASK = CallbackButton("ویرایش و یا حذف تسک")
 
 RETURN_TO_MENU = CallbackButton("بازگشت به منوی اصلی")
+SHOW_TASK_OPERATION_MENU = CallbackButton("ویرایش و یا حذف تسک")
+
+EDIT_TASK = CallbackButton("ویرایش تسک")
+
+DELETE_TASK = CallbackButton("حذف")
+TASK_TIMER = CallbackButton("شروع تایمر")
