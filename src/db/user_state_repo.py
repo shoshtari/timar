@@ -47,6 +47,7 @@ class UserStateRepo(IUserStateRepo):
         );
         """
         self.sqlitedb.execute(stmt)
+        self.sqlitedb.commit()
 
     def set_state(
         self,

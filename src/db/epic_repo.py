@@ -2,8 +2,8 @@ import sqlite3
 import zoneinfo
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import List, Optional
 from datetime import datetime
+from typing import List, Optional
 
 
 @dataclass
@@ -49,6 +49,7 @@ class EpicRepo(IEpicRepo):
         );
         """
         self.sqlitedb.execute(stmt)
+        self.sqlitedb.commit()
 
     def create(self, epic: Epic) -> int:
         stmt = """
@@ -110,8 +111,10 @@ class EpicRepo(IEpicRepo):
         WHERE id = ?
         """
         cursor = self.sqlitedb.cursor()
-        cursor.execute(stmt, (datetime.now(zoneinfo.ZoneInfo("Asia/Tehran")).isoformat(), epic_id))
+        cursor.execute(
+            stmt,
+            (datetime.now(zoneinfo.ZoneInfo("Asia/Tehran")).isoformat(), epic_id),
+        )
         if cursor.rowcount == 0:
             raise ValueError(f"epic with id {epic_id} not found or already deleted")
         self.sqlitedb.commit()
-

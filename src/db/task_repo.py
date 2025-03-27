@@ -55,6 +55,7 @@ class TaskRepo(ITaskRepo):
         );
         """
         self.sqlitedb.execute(stmt)
+        self.sqlitedb.commit()
 
     def create(self, task: Task) -> int:
         stmt = """
