@@ -45,6 +45,7 @@ class TimarBot:
         text: str,
         reply_markup: Optional[dict] = None,
     ) -> Message:
+        default_markup = {"keyboard": [["منوی اصلی"]]}
         if reply_markup is None:
             reply_markup = {}
         if "inline_keyboard" not in reply_markup:
@@ -52,9 +53,13 @@ class TimarBot:
                 [callback_consts.RETURN_TO_MENU],
                 chat_id,
             )
-        # if "reply_keyboard" not in reply_markup:
-        #     reply_markup["reply_keyboard"] = ReplyKeyboardMarkup([["S"]])
 
+        message = await context.bot.send_message(
+            chat_id=chat_id,
+            text=text,
+            reply_markup=default_markup,
+        )
+        await message.delete()
         return await context.bot.send_message(
             chat_id=chat_id,
             text=text,
@@ -421,40 +426,6 @@ class TimarBot:
             text=message_consts.TASK_EDITED,
         )
 
-    async def handle_state(
-        self,
-        update: Update,
-        context: ContextTypes.DEFAULT_TYPE,
-    ) -> None:
-        user_state = db.user_state_repo.get_state(update.effective_chat.id)
-        match user_state:
-            case UserState.CREATE_EPIC:
-                await self.handle_create_epic(update, context)
-            case UserState.CREATE_TASK:
-                await self.handle_create_task(update, context)
-            case UserState.EDIT_TASK:
-                await self.handle_edit_task_state(update, context)
-            case _:
-                logger.warning(
-                    f"unknown message {update.message.text}, user state: {user_state}",
-                )
-
-    async def handle_messages(
-        self,
-        update: Update,
-        context: ContextTypes.DEFAULT_TYPE,
-    ) -> None:
-        match update.message.text:
-            case "/start":
-                await self.handle_start_command(update, context)
-            case "/new_epic":
-                await self.handle_new_epic(update, context)
-            case "/new_task":
-                await self.handle_new_task(update, context)
-            case _:
-                await self.handle_state(update, context)
-                return
-
     async def handle_start_task_timer(
         self,
         update: Update,
@@ -525,6 +496,40 @@ class TimarBot:
             ),
             reply_markup=reply_markup,
         )
+
+    async def handle_state(
+        self,
+        update: Update,
+        context: ContextTypes.DEFAULT_TYPE,
+    ) -> None:
+        user_state = db.user_state_repo.get_state(update.effective_chat.id)
+        match user_state:
+            case UserState.CREATE_EPIC:
+                await self.handle_create_epic(update, context)
+            case UserState.CREATE_TASK:
+                await self.handle_create_task(update, context)
+            case UserState.EDIT_TASK:
+                await self.handle_edit_task_state(update, context)
+            case _:
+                logger.warning(
+                    f"unknown message {update.message.text}, user state: {user_state}",
+                )
+
+    async def handle_messages(
+        self,
+        update: Update,
+        context: ContextTypes.DEFAULT_TYPE,
+    ) -> None:
+        match update.message.text:
+            case "/start" | "منوی اصلی":
+                await self.handle_start_command(update, context)
+            case "/new_epic":
+                await self.handle_new_epic(update, context)
+            case "/new_task":
+                await self.handle_new_task(update, context)
+            case _:
+                await self.handle_state(update, context)
+                return
 
     async def handle_callback(
         self,
