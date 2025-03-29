@@ -58,19 +58,25 @@ EPIC_DELETED = """
 TASK_OPERATION_MENU = """
 شما در حال مشاهده تسک {name} هستید.
 توضیحات:‌{description}
-"""
+""".strip()
 
 UNAUTHORIZED = """
 شما اجازه انجام این عمل را ندارید.
-"""
+""".strip()
 
 TASK_DELETED = """
 تسک {name} با موفقیت حذف شد
-"""
+""".strip()
 
 TASK_EDITED = """
 تسک با موفقیت بروزرسانی شد.
-"""
+""".strip()
 GET_INPUT_FOR_TASK_EDIT = """
 مقدار جدید را وارد کنید.
-"""
+""".strip()
+
+TASK_TIMER_STARTED = """
+تایمر تسک {name} شروع شد.
+پس از پایان مدت دکمه اتمام را فشار دهید.
+مدت زمانی که مشغول هستید:‌{duration}
+""".strip()

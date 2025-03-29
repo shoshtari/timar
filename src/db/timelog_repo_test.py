@@ -3,7 +3,7 @@ from typing import Generator
 
 import pytest
 
-from .time_log import ITimelogRepo, TimelogRepo
+from .timelog_repo import ITimelogRepo, TimelogRepo
 
 
 @pytest.fixture

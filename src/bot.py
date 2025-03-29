@@ -1,8 +1,11 @@
+import asyncio
 import json
 import logging
+import time
+from datetime import datetime
 from typing import Optional
 
-from telegram import ReplyKeyboardMarkup, Update
+from telegram import Message, ReplyKeyboardMarkup, Update
 from telegram.ext import (
     Application,
     CallbackQueryHandler,
@@ -13,24 +16,26 @@ from telegram.ext import (
 )
 
 import callback_consts
+import job
 import message_consts
-from db import Epic, IEpicRepo, ITaskRepo, IUserStateRepo, Task, UserState
+from db import Epic, IEpicRepo, ITaskRepo, ITimelogRepo, IUserStateRepo, Task, UserState
 
 logger = logging.getLogger(__name__)
+import db
 
 
 class TimarBot:
     def __init__(
         self,
-        epic_repo: IEpicRepo,
-        task_repo: ITaskRepo,
-        user_state_repo: IUserStateRepo,
         application: Application,
     ):
-        self.epic_repo = epic_repo
-        self.task_repo = task_repo
-        self.user_state_repo = user_state_repo
         self.application: Application = application
+        self.application.add_handler(
+            MessageHandler(filters.ALL, self.handle_messages),
+        )
+        self.application.add_handler(
+            CallbackQueryHandler(self.handle_callback),
+        )
 
     async def send_message(
         self,
@@ -39,7 +44,7 @@ class TimarBot:
         chat_id: int,
         text: str,
         reply_markup: Optional[dict] = None,
-    ) -> None:
+    ) -> Message:
         if reply_markup is None:
             reply_markup = {}
         if "inline_keyboard" not in reply_markup:
@@ -50,7 +55,7 @@ class TimarBot:
         # if "reply_keyboard" not in reply_markup:
         #     reply_markup["reply_keyboard"] = ReplyKeyboardMarkup([["S"]])
 
-        await context.bot.send_message(
+        return await context.bot.send_message(
             chat_id=chat_id,
             text=text,
             reply_markup=reply_markup,
@@ -85,7 +90,7 @@ class TimarBot:
         context: ContextTypes.DEFAULT_TYPE,
     ) -> None:
         chat_id = update.callback_query.message.chat.id
-        user_epics = self.epic_repo.get_by_chat_id(chat_id)
+        user_epics = db.epic_repo.get_by_chat_id(chat_id)
 
         if user_epics:
             text = message_consts.MANAGE_EPIC_MESSAGE
@@ -121,7 +126,7 @@ class TimarBot:
     ) -> None:
         chat_id = update.message.chat.id
         text = message_consts.NEW_EPIC_MESSAGE
-        self.user_state_repo.set_state(chat_id, UserState.CREATE_EPIC)
+        db.user_state_repo.set_state(chat_id, UserState.CREATE_EPIC)
         await self.send_message(
             context,
             chat_id=chat_id,
@@ -134,7 +139,7 @@ class TimarBot:
         context: ContextTypes.DEFAULT_TYPE,
     ) -> None:
         chat_id = update.effective_chat.id
-        tasks = self.task_repo.get_by_chat_id(chat_id)
+        tasks = db.task_repo.get_by_chat_id(chat_id)
         if not tasks:
             await self.send_message(
                 context,
@@ -171,10 +176,10 @@ class TimarBot:
             description = ""
         chat_id = update.message.chat.id
 
-        self.epic_repo.create(
+        db.epic_repo.create(
             Epic(name=title, description=description, chat_id=chat_id),
         )
-        self.user_state_repo.set_state(chat_id, UserState.NORMAL)
+        db.user_state_repo.set_state(chat_id, UserState.NORMAL)
         await self.send_message(
             context,
             chat_id=chat_id,
@@ -190,7 +195,7 @@ class TimarBot:
         text = update.message.text.split("\n")
         title = text[0].strip()
 
-        user_epics = self.epic_repo.get_by_chat_id(chat_id)
+        user_epics = db.epic_repo.get_by_chat_id(chat_id)
         if not user_epics:
             await self.send_message(
                 context,
@@ -226,7 +231,7 @@ class TimarBot:
         callback_data: dict,
     ) -> None:
         # should go to set title and description
-        self.user_state_repo.set_state(
+        db.user_state_repo.set_state(
             update.effective_chat.id,
             UserState.CREATE_TASK,
             metadata={"epic_id": callback_data["epic_id"]},
@@ -244,16 +249,16 @@ class TimarBot:
     ) -> None:
         text = update.message.text.split("\n")
         chat_id = update.effective_chat.id
-        metadata = self.user_state_repo.get_state_and_metadata(chat_id)[1]
+        metadata = db.user_state_repo.get_state_and_metadata(chat_id)[1]
 
         title = text[0].strip()
         description = "\n".join(text[1:]).strip()
         chat_id = update.message.chat.id
         epic_id = metadata["epic_id"]
-        self.task_repo.create(
+        db.task_repo.create(
             Task(name=title, description=description, epic_id=epic_id),
         )
-        self.user_state_repo.set_state(chat_id, UserState.NORMAL)
+        db.user_state_repo.set_state(chat_id, UserState.NORMAL)
         await self.send_message(
             context,
             chat_id=chat_id,
@@ -268,7 +273,7 @@ class TimarBot:
     ) -> None:
         chat_id = update.effective_chat.id
         epic_id = callback_data["epic_id"]
-        epic = self.epic_repo.get_by_id(epic_id)
+        epic = db.epic_repo.get_by_id(epic_id)
         text = message_consts.EDIT_EPIC.format(
             name=epic.name,
             description=epic.description,
@@ -301,7 +306,7 @@ class TimarBot:
     ) -> None:
         chat_id = update.effective_chat.id
         task_id = callback_data["task_id"]
-        task = self.task_repo.get_by_id(task_id)
+        task = db.task_repo.get_by_id(task_id)
         text = message_consts.TASK_OPERATION_MENU.format(
             name=task.name,
             description=task.description,
@@ -321,7 +326,7 @@ class TimarBot:
                     metadata=metadata | {"column": "description"},
                 ),
                 callback_consts.DELETE_TASK.copy().add_metadata(metadata=metadata),
-                callback_consts.TASK_TIMER.copy().add_metadata(metadata=metadata),
+                callback_consts.START_TASK_TIMER.copy().add_metadata(metadata=metadata),
             ],
             chat_id,
         )
@@ -339,13 +344,13 @@ class TimarBot:
         context: ContextTypes.DEFAULT_TYPE,
         epic_id: int,
     ) -> None:
-        epic = self.epic_repo.get_by_id(epic_id)
+        epic = db.epic_repo.get_by_id(epic_id)
         if epic.chat_id != update.effective_chat.id:
             logger.warning(
                 f"User {update.effective_chat.id} tried to delete epic {epic_id} which is not theirs",
             )
             return
-        self.epic_repo.delete(epic_id)
+        db.epic_repo.delete(epic_id)
         await self.send_message(
             context,
             chat_id=update.effective_chat.id,
@@ -360,7 +365,7 @@ class TimarBot:
         task_name: str,
     ) -> None:
         given_chat_id = update.effective_chat.id
-        task_chat_id = self.task_repo.get_owner_chat(task_id)
+        task_chat_id = db.task_repo.get_owner_chat(task_id)
         if task_chat_id != task_chat_id:
             logger.warning(
                 f"User {given_chat_id} tried to delete task {task_id} that doesn't belong to them",
@@ -371,7 +376,7 @@ class TimarBot:
                 text=message_consts.UNAUTHORIZED,
             )
 
-        self.task_repo.delete(task_id)
+        db.task_repo.delete(task_id)
         await self.send_message(
             context,
             chat_id=given_chat_id,
@@ -386,7 +391,7 @@ class TimarBot:
         column: str,
     ) -> None:
         chat_id = update.effective_chat.id
-        self.user_state_repo.set_state(
+        db.user_state_repo.set_state(
             chat_id,
             UserState.EDIT_TASK,
             metadata={"column": column, "task_id": task_id},
@@ -403,13 +408,13 @@ class TimarBot:
         context: ContextTypes.DEFAULT_TYPE,
     ) -> None:
         value = update.message.text
-        _, metadata = self.user_state_repo.get_state_and_metadata(
+        _, metadata = db.user_state_repo.get_state_and_metadata(
             update.effective_chat.id,
         )
         task_id = metadata["task_id"]
         column = metadata["column"]
 
-        self.task_repo.edit(task_id, column, value)
+        db.task_repo.edit(task_id, column, value)
         await self.send_message(
             context,
             chat_id=update.effective_chat.id,
@@ -421,7 +426,7 @@ class TimarBot:
         update: Update,
         context: ContextTypes.DEFAULT_TYPE,
     ) -> None:
-        user_state = self.user_state_repo.get_state(update.effective_chat.id)
+        user_state = db.user_state_repo.get_state(update.effective_chat.id)
         match user_state:
             case UserState.CREATE_EPIC:
                 await self.handle_create_epic(update, context)
@@ -449,6 +454,51 @@ class TimarBot:
             case _:
                 await self.handle_state(update, context)
                 return
+
+    async def handle_start_task_timer(
+        self,
+        update: Update,
+        context: ContextTypes.DEFAULT_TYPE,
+        callback_data: Optional[dict] = None,
+    ) -> None:
+        if callback_data is None:
+            callback_data = json.loads(update.callback_query.data)
+        task_id = callback_data["task_id"]
+        task_name = callback_data["task_name"]
+        start_time = datetime.now()
+        timelog_id = db.timelog_repo.create(task_id, start_time)
+        buttons = [
+            callback_consts.RETURN_TO_MENU,
+            callback_consts.END_TASK_TIMER.copy().add_metadata(
+                {
+                    "timelog_id": timelog_id,
+                    "task_id": task_id,
+                    "start_time": start_time.isoformat(),
+                },
+            ),
+        ]
+
+        reply_markup = {
+            "inline_keyboard": callback_consts.CallbackButton.aggregate(
+                buttons,
+                update.effective_chat.id,
+            ),
+        }
+        res = await self.send_message(
+            context,
+            chat_id=update.effective_chat.id,
+            text=message_consts.TASK_TIMER_STARTED.format(
+                name=task_name,
+                duration="۰ ثانیه",
+            ),
+            reply_markup=reply_markup,
+        )
+
+        metadata = {"telegram_message": res.to_dict()}
+        db.timelog_repo.set_metadata(
+            timelog_id=timelog_id,
+            metadata=json.dumps(metadata),
+        )
 
     async def handle_callback(
         self,
@@ -491,14 +541,17 @@ class TimarBot:
             case callback_consts.DELETE_EPIC:
                 epic_id = data["epic_id"]
                 await self.handle_delete_epic(update, context, epic_id)
+            case callback_consts.START_TASK_TIMER:
+                await self.handle_start_task_timer(update, context, data)
+
             case _:
                 logger.warning(f"Unknown action {data['action']}")
 
     def run(self) -> None:
-        self.application.add_handler(
-            MessageHandler(filters.ALL, self.handle_messages),
-        )
-        self.application.add_handler(
-            CallbackQueryHandler(self.handle_callback),
+
+        self.application.job_queue.run_repeating(
+            job.update_in_progress_time_logs,
+            interval=1,
+            first=0,
         )
         self.application.run_polling()

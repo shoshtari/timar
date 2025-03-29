@@ -101,4 +101,5 @@ SHOW_TASK_OPERATION_MENU = CallbackButton("ویرایش و یا حذف تسک")
 EDIT_TASK = CallbackButton("ویرایش تسک")
 
 DELETE_TASK = CallbackButton("حذف")
-TASK_TIMER = CallbackButton("شروع تایمر")
+START_TASK_TIMER = CallbackButton("شروع تایمر")
+END_TASK_TIMER = CallbackButton("پایان تایمر")
