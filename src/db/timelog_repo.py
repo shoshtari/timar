@@ -15,11 +15,29 @@ class TimelogStatus(Enum):
 
 @dataclass
 class Timelog:
+    id: int
     task_id: int
     start: datetime
     status: TimelogStatus
     end: Optional[datetime] = None
     metadata: Optional[str] = None
+
+    @property
+    def eclapsed_time(self) -> str:
+        end = self.end or datetime.now()
+        eclapsed = (end - self.start).total_seconds()
+
+        eclapsed_str = ""
+        if hour := int(eclapsed // 3600):
+            eclapsed_str += f"{hour} ساعت "
+        eclapsed = eclapsed % 3600
+        if minute := int(eclapsed // 60):
+            eclapsed_str += f"{minute} دقیقه "
+        eclapsed = eclapsed % 60
+        if seconds := int(eclapsed):
+            eclapsed_str += f"{seconds} ثانیه "
+
+        return eclapsed_str
 
 
 class ITimelogRepo(ABC):
@@ -75,4 +93,55 @@ class TimelogRepo(ITimelogRepo):
         """
         cursor = self.sqlitedb.cursor()
         cursor.execute(stmt, (metadata, timelog_id))
+        self.sqlitedb.commit()
+
+    def get_in_progress_logs(self) -> List[Timelog]:
+        stmt = """
+        SELECT id, task_id, start, status, metadata
+        FROM timelog
+        WHERE status = ?
+        """
+        cursor = self.sqlitedb.cursor()
+        cursor.execute(stmt, (TimelogStatus.IN_PROGRESS.name,))
+        rows = cursor.fetchall()
+        ans = []
+        for row in rows:
+            ans.append(
+                Timelog(
+                    id=row[0],
+                    task_id=row[1],
+                    start=datetime.fromisoformat(row[2]),
+                    status=row[3],
+                    metadata=row[4],
+                ),
+            )
+        return ans
+
+    def get_by_id(self, timelog_id: int) -> Timelog:
+        stmt = """
+        SELECT id, task_id, start, status, metadata, end
+        FROM timelog
+        WHERE id = ?
+        """
+        cursor = self.sqlitedb.cursor()
+        cursor.execute(stmt, (timelog_id,))
+        row = cursor.fetchall()[0]
+
+        return Timelog(
+            id=row[0],
+            task_id=row[1],
+            start=datetime.fromisoformat(row[2]),
+            status=row[3],
+            metadata=row[4],
+            end=datetime.fromisoformat(row[5]),
+        )
+
+    def set_end_if_not_exists(self, timelog_id: int, end: datetime) -> None:
+        stmt = """
+        UPDATE timelog SET end = ?, status = ? WHERE id = ?
+        """
+        self.sqlitedb.execute(
+            stmt,
+            (end.isoformat(), TimelogStatus.DONE.name, timelog_id),
+        )
         self.sqlitedb.commit()

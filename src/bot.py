@@ -468,12 +468,10 @@ class TimarBot:
         start_time = datetime.now()
         timelog_id = db.timelog_repo.create(task_id, start_time)
         buttons = [
-            callback_consts.RETURN_TO_MENU,
             callback_consts.END_TASK_TIMER.copy().add_metadata(
                 {
                     "timelog_id": timelog_id,
                     "task_id": task_id,
-                    "start_time": start_time.isoformat(),
                 },
             ),
         ]
@@ -498,6 +496,34 @@ class TimarBot:
         db.timelog_repo.set_metadata(
             timelog_id=timelog_id,
             metadata=json.dumps(metadata),
+        )
+
+    async def handle_end_task_timer(
+        self,
+        update: Update,
+        context: ContextTypes.DEFAULT_TYPE,
+        data: dict,
+    ) -> None:
+        end_time = datetime.now()
+        db.timelog_repo.set_end_if_not_exists(data["timelog_id"], end_time)
+        timelog = db.timelog_repo.get_by_id(data["timelog_id"])
+        task = db.task_repo.get_by_id(timelog.task_id)
+        chat_id = json.loads(timelog.metadata)["telegram_message"]["chat"]["id"]
+
+        reply_markup = {
+            "inline_keyboard": callback_consts.CallbackButton.aggregate(
+                [callback_consts.RETURN_TO_MENU],
+                chat_id=chat_id,
+            ),
+        }
+        res = await self.send_message(
+            context,
+            chat_id=update.effective_chat.id,
+            text=message_consts.TASK_TIMER_ENDED.format(
+                name=task.name,
+                duration=timelog.eclapsed_time,
+            ),
+            reply_markup=reply_markup,
         )
 
     async def handle_callback(
@@ -544,6 +570,8 @@ class TimarBot:
             case callback_consts.START_TASK_TIMER:
                 await self.handle_start_task_timer(update, context, data)
 
+            case callback_consts.END_TASK_TIMER:
+                await self.handle_end_task_timer(update, context, data)
             case _:
                 logger.warning(f"Unknown action {data['action']}")
 

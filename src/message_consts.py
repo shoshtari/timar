@@ -78,5 +78,10 @@ GET_INPUT_FOR_TASK_EDIT = """
 TASK_TIMER_STARTED = """
 تایمر تسک {name} شروع شد.
 پس از پایان مدت دکمه اتمام را فشار دهید.
-مدت زمانی که مشغول هستید:‌{duration}
+مدت زمانی که مشغول هستید:‌ {duration}
+""".strip()
+
+TASK_TIMER_ENDED = """
+تایمر تسک {name} تمام شد.
+مدت زمان صرف شده:‌{duration}
 """.strip()
