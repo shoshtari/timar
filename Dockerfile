@@ -9,6 +9,6 @@ COPY requirements.txt /src/
 RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
 
-COPY . /src/
+COPY ./src /src/
 
 CMD ["python", "main.py"]

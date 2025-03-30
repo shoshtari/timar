@@ -1,0 +1,10 @@
+services:
+  backend:
+    image: ghcr.io/shoshtari/timar
+    pull_policy: always
+    env_file: ./.env
+    volumes:
+      - sqlite_file:/etc/timar
+
+volumes:
+  sqlite_file:
