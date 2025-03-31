@@ -527,6 +527,19 @@ class TimarBot:
             reply_markup=reply_markup,
         )
 
+    async def handle_delete_task_timer(
+        self,
+        context: ContextTypes.DEFAULT_TYPE,
+        chat_id: int,
+        timelog_id: int,
+    ) -> None:
+        db.timelog_repo.delete(timelog_id=timelog_id)
+        await self.send_message(
+            context=context,
+            chat_id=chat_id,
+            text=message_consts.TIMELOG_DELETED,
+        )
+
     async def handle_state(
         self,
         update: Update,
@@ -607,6 +620,12 @@ class TimarBot:
 
             case callback_consts.END_TASK_TIMER:
                 await self.handle_end_task_timer(update, context, data)
+            case callback_consts.DELETE_TASK_TIMER:
+                await self.handle_delete_task_timer(
+                    context,
+                    update.effective_chat.id,
+                    data["timelog_id "],
+                )
             case _:
                 logger.warning(f"Unknown action {data['action']}")
 

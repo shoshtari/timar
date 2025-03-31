@@ -29,6 +29,9 @@ async def update_in_progress_time_logs(context: ContextTypes.DEFAULT_TYPE) -> No
                         callback_consts.END_TASK_TIMER.copy().add_metadata(
                             {"timelog_id": timelog.id},
                         ),
+                        callback_consts.DELETE_TASK_TIMER.copy().add_metadata(
+                            {"timelog_id": timelog.id},
+                        ),
                     ],
                     chat_id=chat_id,
                 ),

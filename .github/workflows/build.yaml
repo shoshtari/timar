@@ -36,3 +36,12 @@ jobs:
       - name: Push Docker Image
         run: |
           docker push "ghcr.io/${{ github.repository }}:latest"
+
+      - name: notify
+        run: |
+          message="🚀New version deployed"
+          message="$message\n📝 Commit Message: ${{ github.event.head_commit.message }}"
+
+          curl -s https://tapi.bale.ai/bot${{ secrets.TGBOT_TOKEN }}/sendMessage \
+          -d "{\"chat_id\":\"${{ secrets.TGCHAT_ID }}\", \"text\": \"$message\"}" \
+              -H 'Content-Type: Application/Json'

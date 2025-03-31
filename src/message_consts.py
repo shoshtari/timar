@@ -89,3 +89,7 @@ TASK_TIMER_ENDED = """
 REPORT_GET_DURATION = """
 مشخص کنید گزارش چند روز اخیر را میخواهید.
 """
+
+TIMELOG_DELETED = """
+تایمر این تسک حذف شد.
+"""

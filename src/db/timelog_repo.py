@@ -69,6 +69,10 @@ class ITimelogRepo(ABC):
     ) -> List[Timelog]:
         raise NotImplementedError
 
+    @abstractmethod
+    def delete(self, timelog_id: int) -> None:
+        raise NotImplementedError
+
 
 class TimelogRepo(ITimelogRepo):
     def __init__(self, sqlitedb: sqlite3.Connection, do_migrate: bool):
@@ -194,3 +198,11 @@ class TimelogRepo(ITimelogRepo):
                 ),
             )
         return ans
+
+    def delete(self, timelog_id: int) -> None:
+        stmt = """
+        DELETE FROM timelog WHERE id = ?
+        """
+        cursor = self.sqlitedb.cursor()
+        cursor.execute(stmt, (timelog_id,))
+        self.sqlitedb.commit()
