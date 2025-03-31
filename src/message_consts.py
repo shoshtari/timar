@@ -85,3 +85,7 @@ TASK_TIMER_ENDED = """
 تایمر تسک {name} تمام شد.
 مدت زمان صرف شده:‌{duration}
 """.strip()
+
+REPORT_GET_DURATION = """
+مشخص کنید گزارش چند روز اخیر را میخواهید.
+"""

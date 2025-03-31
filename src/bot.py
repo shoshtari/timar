@@ -2,7 +2,7 @@ import asyncio
 import json
 import logging
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 from telegram import Message, ReplyKeyboardMarkup, Update
@@ -137,6 +137,31 @@ class TimarBot:
             chat_id=chat_id,
             text=text,
         )
+
+    async def handle_report_initiate(
+        self,
+        update: Update,
+        context: ContextTypes.DEFAULT_TYPE,
+    ) -> None:
+        chat_id = update.effective_chat.id
+        db.user_state_repo.set_state(
+            chat_id,
+            UserState.REPORT_DURATION,
+        )
+        await self.send_message(
+            context,
+            chat_id=chat_id,
+            text=message_consts.REPORT_GET_DURATION,
+        )
+
+    async def handle_report_duration(
+        self,
+        update: Update,
+        context: ContextTypes.DEFAULT_TYPE,
+    ) -> None:
+        chat_id = update.effective_chat.id
+        db.user_state_repo.set_state(chat_id, UserState.NORMAL)
+        duration = timedelta(days=float(update.message.text))
 
     async def handle_task_management(
         self,
@@ -443,6 +468,11 @@ class TimarBot:
                 {
                     "timelog_id": timelog_id,
                     "task_id": task_id,
+                },
+            ),
+            callback_consts.DELETE_TASK_TIMER.copy().add_metadata(
+                {
+                    "timelog_id": timelog_id,
                 },
             ),
         ]

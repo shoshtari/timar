@@ -2,7 +2,7 @@ import sqlite3
 import zoneinfo
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import Enum
 from typing import List, Optional
 
@@ -47,6 +47,26 @@ class ITimelogRepo(ABC):
 
     @abstractmethod
     def set_metadata(self, timelog_id: int, metadata: str) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_in_progress_logs(self) -> List[Timelog]:
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_by_id(self, timelog_id: int) -> Timelog:
+        raise NotImplementedError
+
+    @abstractmethod
+    def set_end_if_not_exists(self, timelog_id: int, end: datetime) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_by_user_id_and_time(
+        self,
+        user_id: int,
+        duration: timedelta,
+    ) -> List[Timelog]:
         raise NotImplementedError
 
 
@@ -106,11 +126,12 @@ class TimelogRepo(ITimelogRepo):
         rows = cursor.fetchall()
         ans = []
         for row in rows:
+            start = datetime.fromisoformat(row[2])
             ans.append(
                 Timelog(
                     id=row[0],
                     task_id=row[1],
-                    start=datetime.fromisoformat(row[2]),
+                    start=start,
                     status=row[3],
                     metadata=row[4],
                 ),
@@ -133,7 +154,7 @@ class TimelogRepo(ITimelogRepo):
             start=datetime.fromisoformat(row[2]),
             status=row[3],
             metadata=row[4],
-            end=datetime.fromisoformat(row[5]),
+            end=datetime.fromisoformat(row[5]) if row[5] else None,
         )
 
     def set_end_if_not_exists(self, timelog_id: int, end: datetime) -> None:
@@ -145,3 +166,31 @@ class TimelogRepo(ITimelogRepo):
             (end.isoformat(), TimelogStatus.DONE.name, timelog_id),
         )
         self.sqlitedb.commit()
+
+    def get_by_user_id_and_time(
+        self,
+        user_id: int,
+        duration: timedelta,
+    ) -> List[Timelog]:
+        stmt = """
+        SELECT timelog.id, timelog.task_id, timelog.start, timelog.status, timelog.metadata, timelog.end
+        FROM timelog
+        WHERE start > ?
+        """
+        start_time = datetime.now() - duration
+        cursor = self.sqlitedb.cursor()
+        cursor.execute(stmt, (start_time.isoformat(),))
+        rows = cursor.fetchall()
+        ans = []
+        for row in rows:
+            ans.append(
+                Timelog(
+                    id=row[0],
+                    task_id=row[1],
+                    start=datetime.fromisoformat(row[2]),
+                    status=TimelogStatus[row[3]],
+                    metadata=row[4],
+                    end=datetime.fromisoformat(row[5]) if row[5] else None,
+                ),
+            )
+        return ans

@@ -11,6 +11,7 @@ class UserState(Enum):
     CREATE_EPIC = 1
     CREATE_TASK = 2
     EDIT_TASK = 3
+    REPORT_DURATION = 4
 
 
 class IUserStateRepo(ABC):
