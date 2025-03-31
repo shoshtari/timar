@@ -5,6 +5,10 @@ services:
     env_file: ./.env
     volumes:
       - sqlite_file:/etc/timar
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
 
 volumes:
   sqlite_file:
