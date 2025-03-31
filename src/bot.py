@@ -629,11 +629,11 @@ class TimarBot:
             case _:
                 logger.warning(f"Unknown action {data['action']}")
 
-    def run(self) -> None:
+    def run(self, poll_interval: float) -> None:
 
         self.application.job_queue.run_repeating(
             job.update_in_progress_time_logs,
             interval=1,
             first=0,
         )
-        self.application.run_polling()
+        self.application.run_polling(poll_interval=poll_interval)

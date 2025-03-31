@@ -37,3 +37,4 @@ class ServiceConfig:
     BOT_BASE_URL: str = env("BOT_BASE_URL")
     SQLITE_FILE: str = env("SQLITE", default="data.db")
     MIGRATION: bool = env("MIGRATION", default=True)
+    POLL_INTERVAL: float = env("POLL_INTERVAL", default=0.2)

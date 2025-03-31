@@ -26,4 +26,4 @@ application = (
 
 
 initialize_repos(ServiceConfig.SQLITE_FILE, ServiceConfig.MIGRATION)
-bot.TimarBot(application).run()
+bot.TimarBot(application).run(poll_interval=ServiceConfig.POLL_INTERVAL)
