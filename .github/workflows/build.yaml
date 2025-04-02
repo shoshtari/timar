@@ -43,5 +43,5 @@ jobs:
           message="$message\n📝 Commit Message: ${{ github.event.head_commit.message }}"
 
           curl -s https://tapi.bale.ai/bot${{ secrets.TGBOT_TOKEN }}/sendMessage \
-          -d "{\"chat_id\":\"${{ secrets.TGCHAT_ID }}\", \"text\": \"$message\"}" \
+          -d "{\"chat_id\":\"${{ secrets.TGCHAT_ID }}\", \"text\": \"$message\", \"reply_markup\": {\"inline_keyboard\": [[\"ﺎﺘﻣﺎﻣ\"]]}}" \
               -H 'Content-Type: Application/Json'

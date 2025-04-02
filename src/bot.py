@@ -688,6 +688,11 @@ class TimarBot:
                     data["epic_id"],
                     data["column"],
                 )
+            case callback_consts.SHUTDOWN:
+                await update.callback_query.message.reply_text("در حال خاموش کردن بات")
+                await self.application.stop_running()
+                await self.application.shutdown()
+
             case _:
                 logger.warning(f"Unknown action {data['action']}")
 
