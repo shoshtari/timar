@@ -88,8 +88,14 @@ TASK_TIMER_ENDED = """
 
 REPORT_GET_DURATION = """
 مشخص کنید گزارش چند روز اخیر را میخواهید.
-"""
+""".strip()
 
 TIMELOG_DELETED = """
 تایمر این تسک حذف شد.
+""".strip()
+GET_INPUT_FOR_EPIC_EDIT = """
+مقدار جدید را واراد کنید.
+""".strip()
+EPIC_EDITED = """
+اپیک با موفقیت ویرایش شد.
 """

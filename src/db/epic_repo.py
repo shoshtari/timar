@@ -31,6 +31,10 @@ class IEpicRepo(ABC):
     def delete(self, epic_id: int) -> None:
         raise NotImplementedError
 
+    @abstractmethod
+    def edit(self, epic_id: int, column: str, value: str) -> None:
+        raise NotImplementedError
+
 
 class EpicRepo(IEpicRepo):
     def __init__(self, sqlitedb: sqlite3.Connection, do_migrate: bool):
@@ -117,4 +121,18 @@ class EpicRepo(IEpicRepo):
         )
         if cursor.rowcount == 0:
             raise ValueError(f"epic with id {epic_id} not found or already deleted")
+        self.sqlitedb.commit()
+
+    def edit(self, epic_id: int, column: str, value: str) -> None:
+        assert column in ("name", "description"), column
+
+        stmt = f"""
+        UPDATE epic
+        SET {column} = ?
+        WHERE id = ?
+        """
+        cursor = self.sqlitedb.cursor()
+        cursor.execute(stmt, (value, epic_id))
+        if cursor.rowcount == 0:
+            raise ValueError(f"epic with id {epic_id} not found")
         self.sqlitedb.commit()

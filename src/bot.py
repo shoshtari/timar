@@ -102,7 +102,7 @@ class TimarBot:
 
             buttons = []
             for epic in user_epics:
-                button = callback_consts.EDIT_EPIC.copy()
+                button = callback_consts.EPIC_MENU.copy()
                 button.add_metadata({"epic_id": epic.id})
                 button.set_text(epic.name)
                 buttons.append(button)
@@ -295,7 +295,7 @@ class TimarBot:
             text=message_consts.NEW_TASK_CREATED.format(name=title),
         )
 
-    async def handle_edit_epic(
+    async def handle_epic_menu(
         self,
         update: Update,
         context: ContextTypes.DEFAULT_TYPE,
@@ -310,11 +310,15 @@ class TimarBot:
         )
         buttons = callback_consts.CallbackButton.aggregate(
             [
-                callback_consts.EDIT_EPIC_NAME.copy().add_metadata(
-                    {"epic_id": epic_id},
+                callback_consts.EDIT_EPIC.copy()
+                .set_text("ویرایش نام")
+                .add_metadata(
+                    {"epic_id": epic_id, "column": "name"},
                 ),
-                callback_consts.EDIT_EPIC_DESCRIPTION.copy().add_metadata(
-                    {"epic_id": epic_id},
+                callback_consts.EDIT_EPIC.copy()
+                .set_text("ویرایش توضیحات")
+                .add_metadata(
+                    {"epic_id": epic_id, "column": "description"},
                 ),
                 callback_consts.DELETE_EPIC.copy().add_metadata({"epic_id": epic_id}),
             ],
@@ -540,6 +544,44 @@ class TimarBot:
             text=message_consts.TIMELOG_DELETED,
         )
 
+    async def handle_edit_epic_button(
+        self,
+        context: ContextTypes.DEFAULT_TYPE,
+        chat_id: int,
+        epic_id: int,
+        column: str,
+    ) -> None:
+        state_metadata = {
+            "epic_id": epic_id,
+            "column": column,
+        }
+        db.user_state_repo.set_state(
+            chat_id,
+            UserState.EDIT_TASK,
+            metadata=state_metadata,
+        )
+        await self.send_message(
+            context,
+            chat_id=chat_id,
+            text=message_consts.GET_INPUT_FOR_EPIC_EDIT,
+        )
+
+    async def handle_edit_epic_with_input(
+        self,
+        context: ContextTypes.DEFAULT_TYPE,
+        chat_id: int,
+        value: str,
+    ) -> None:
+        user_state, metadata = db.user_state_repo.get_state_and_metadata(chat_id)
+        epic_id = metadata["epic_id"]
+        column = metadata["column"]
+        db.epic_repo.edit(epic_id, column, value)
+        await self.send_message(
+            context,
+            chat_id=chat_id,
+            text=message_consts.EPIC_EDITED,
+        )
+
     async def handle_state(
         self,
         update: Update,
@@ -553,6 +595,12 @@ class TimarBot:
                 await self.handle_create_task(update, context)
             case UserState.EDIT_TASK:
                 await self.handle_edit_task_state(update, context)
+            case UserState.EDIT_EPIC:
+                await self.handle_edit_epic_with_input(
+                    context,
+                    update.effective_chat.id,
+                    update.message.text,
+                )
             case _:
                 logger.warning(
                     f"unknown message {update.message.text}, user state: {user_state}",
@@ -591,8 +639,15 @@ class TimarBot:
                 await self.handle_task_management(update, context)
             case callback_consts.SELECT_EPIC_FOR_TASK:
                 await self.handle_selected_epic_for_new_task(update, context, data)
+            case callback_consts.EPIC_MENU:
+                await self.handle_epic_menu(update, context, data)
             case callback_consts.EDIT_EPIC:
-                await self.handle_edit_epic(update, context, data)
+                await self.handle_edit_epic_button(
+                    context,
+                    update.effective_chat.id,
+                    data["epic_id"],
+                    data["column"],
+                )
             case callback_consts.SHOW_TASK_OPERATION_MENU:
                 await self.handle_task_operation_menu(update, context, data)
             case callback_consts.DELETE_TASK:
@@ -625,6 +680,13 @@ class TimarBot:
                     context,
                     update.effective_chat.id,
                     data["timelog_id "],
+                )
+            case callback_consts.EDIT_EPIC:
+                await self.handle_edit_epic_button(
+                    context,
+                    update.effective_chat.id,
+                    data["epic_id"],
+                    data["column"],
                 )
             case _:
                 logger.warning(f"Unknown action {data['action']}")

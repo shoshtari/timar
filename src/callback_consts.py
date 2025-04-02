@@ -86,10 +86,9 @@ class CallbackButton:
 TASK_MANAGEMENT = CallbackButton("مدیریت تسک ها")
 EPICS_MANAGEMENT = CallbackButton("مدیریت اپیک ها")
 
-EDIT_EPIC = CallbackButton("ویرایش و یا حذف اپیک")
+EPIC_MENU = CallbackButton("ویرایش و یا حذف اپیک")
+EDIT_EPIC = CallbackButton("ویرایش اپیک")
 
-EDIT_EPIC_NAME = CallbackButton("ویرایش نام اپیک", text="ویرایش نام")
-EDIT_EPIC_DESCRIPTION = CallbackButton("ویرایش توضیحات اپیک", text="ویرایش توضیحات")
 DELETE_EPIC = CallbackButton("حذف اپیک", text="حذف")
 
 SELECT_EPIC_FOR_TASK = CallbackButton("انتخاب اپیک برای تسک")
