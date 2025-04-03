@@ -557,7 +557,7 @@ class TimarBot:
         }
         db.user_state_repo.set_state(
             chat_id,
-            UserState.EDIT_TASK,
+            UserState.EDIT_EPIC,
             metadata=state_metadata,
         )
         await self.send_message(
@@ -627,6 +627,7 @@ class TimarBot:
         update: Update,
         context: ContextTypes.DEFAULT_TYPE,
     ) -> None:
+        logger.debug("new callback query recieved")
         query = update.callback_query
         try:
             data = json.loads(query.data)
