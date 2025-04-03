@@ -103,5 +103,3 @@ DELETE_TASK = CallbackButton("حذف")
 START_TASK_TIMER = CallbackButton("شروع تایمر")
 END_TASK_TIMER = CallbackButton("پایان تایمر")
 DELETE_TASK_TIMER = CallbackButton("حذف تایمر", text="حذف")
-
-SHUTDOWN = CallbackButton("اتمام")
