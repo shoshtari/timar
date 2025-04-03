@@ -38,3 +38,4 @@ class ServiceConfig:
     SQLITE_FILE: str = env("SQLITE", default="data.db")
     MIGRATION: bool = env("MIGRATION", default=True)
     POLL_INTERVAL: float = env("POLL_INTERVAL", default=0.2)
+    LOG_CHAT_ID: int = env("LOG_CHAT_ID", default=1239963443)
