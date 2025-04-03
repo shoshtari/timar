@@ -2,6 +2,7 @@ services:
   timar:
     image: ghcr.io/shoshtari/timar
     pull_policy: always
+    restart: always
     env_file: ./.env
     volumes:
       - sqlite_file:/etc/timar
