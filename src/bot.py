@@ -625,7 +625,8 @@ class TimarBot:
                     logger.warning(f"unauthorized shutdown {update.effective_chat.id}")
                     return
                 await update.message.reply_text("در حال خاموش کردن بات")
-                await self.application.stop_running()
+                self.application.stop_running()
+                await self.application.stop()
                 await self.application.shutdown()
             case _:
                 await self.handle_state(update, context)
