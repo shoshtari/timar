@@ -28,6 +28,7 @@ class TimarBot:
     def __init__(
         self,
         application: Application,
+        admin_id: int,
     ):
         self.application: Application = application
         self.application.add_handler(
@@ -36,6 +37,7 @@ class TimarBot:
         self.application.add_handler(
             CallbackQueryHandler(self.handle_callback),
         )
+        self.admin_id = admin_id
 
     async def send_message(
         self,
@@ -618,6 +620,13 @@ class TimarBot:
                 await self.handle_new_epic(update, context)
             case "/new_task":
                 await self.handle_new_task(update, context)
+            case "/shutdown":
+                if update.effective_chat.id != self.admin_id:
+                    logger.warning(f"unauthorized shutdown {update.effective_chat.id}")
+                    return
+                await update.message.reply_text("در حال خاموش کردن بات")
+                await self.application.stop_running()
+                await self.application.shutdown()
             case _:
                 await self.handle_state(update, context)
                 return
@@ -689,10 +698,6 @@ class TimarBot:
                     data["epic_id"],
                     data["column"],
                 )
-            case callback_consts.SHUTDOWN:
-                await update.callback_query.message.reply_text("در حال خاموش کردن بات")
-                await self.application.stop_running()
-                await self.application.shutdown()
 
             case _:
                 logger.warning(f"Unknown action {data['action']}")

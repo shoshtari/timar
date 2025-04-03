@@ -41,7 +41,9 @@ jobs:
         run: |
           message="🚀New version deployed"
           message="$message\n📝 Commit Message: ${{ github.event.head_commit.message }}"
+          message="$message\n🔗 Commit URL: [link](${{ github.event.head_commit.url }})"
+          message="$message\nsend /shutdown to stop the bot"
 
           curl -s https://tapi.bale.ai/bot${{ secrets.TGBOT_TOKEN }}/sendMessage \
-          -d "{\"chat_id\":\"${{ secrets.TGCHAT_ID }}\", \"text\": \"$message\", \"reply_markup\": {\"inline_keyboard\": [[{\"callback_data\": \"{\"action\": \"\\u0627\\u062a\\u0645\\u0627\\u0645\"}\", \"text\": \"اتمام\"}]]}}" \
+          -d "{\"chat_id\":\"${{ secrets.TGCHAT_ID }}\", \"text\": \"$message\"}" \
               -H 'Content-Type: Application/Json'

@@ -26,10 +26,12 @@ application = (
 
 logger = TelegramLogger(
     url=f"https://tapi.bale.ai/bot{ServiceConfig.TOKEN}/sendMessage",
-    chat_id=ServiceConfig.LOG_CHAT_ID,
+    chat_id=ServiceConfig.ADMIN_ID,
 )
 logger.setLevel(logging.WARNING)
 logging.basicConfig(level=logging.DEBUG, handlers=[logger, logging.StreamHandler()])
 
 initialize_repos(ServiceConfig.SQLITE_FILE, ServiceConfig.MIGRATION)
-bot.TimarBot(application).run(poll_interval=ServiceConfig.POLL_INTERVAL)
+bot.TimarBot(application, ServiceConfig.ADMIN_ID).run(
+    poll_interval=ServiceConfig.POLL_INTERVAL,
+)
