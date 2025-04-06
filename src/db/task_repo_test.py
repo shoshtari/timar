@@ -17,7 +17,7 @@ def test_task_repo() -> None:
     assert task_id is not None
     assert isinstance(task_id, int)
 
-    tasks = task_repo.get_by_chat_id(1)
+    tasks = task_repo.get_undone_by_chat_id(1)
     assert len(tasks) == 1
     assert tasks[0].id == task_id
     assert tasks[0].name == "test"

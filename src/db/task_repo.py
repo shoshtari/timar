@@ -3,6 +3,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import List, Optional
 
+from .utils import add_column_if_not_exists
+
 
 @dataclass
 class Task:
@@ -10,6 +12,7 @@ class Task:
     description: str
     epic_id: int
     id: Optional[int] = None
+    Done: bool = False
 
 
 class ITaskRepo(ABC):
@@ -18,7 +21,7 @@ class ITaskRepo(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_by_chat_id(self, chat_id: int) -> List[Task]:
+    def get_undone_by_chat_id(self, chat_id: int) -> List[Task]:
         raise NotImplementedError
 
     @abstractmethod
@@ -54,8 +57,17 @@ class TaskRepo(ITaskRepo):
             FOREIGN KEY(epic_id) REFERENCES epics(id)
         );
         """
+
         self.sqlitedb.execute(stmt)
         self.sqlitedb.commit()
+
+        add_column_if_not_exists(
+            sqlite_conn=self.sqlitedb,
+            table_name="task",
+            col_name="done",
+            col_type="BOOL",
+            default=False,
+        )
 
     def create(self, task: Task) -> int:
         stmt = """
@@ -70,12 +82,14 @@ class TaskRepo(ITaskRepo):
         self.sqlitedb.commit()
         return out
 
-    def get_by_chat_id(self, chat_id: int) -> List[Task]:
+    def get_undone_by_chat_id(self, chat_id: int) -> List[Task]:
         stmt = """
         SELECT id, name, description, epic_id
         FROM task
         WHERE epic_id IN
         (SELECT id FROM epic WHERE chat_id = ?)
+        AND
+        done = false
         """
         cursor = self.sqlitedb.cursor()
         cursor.execute(stmt, (chat_id,))

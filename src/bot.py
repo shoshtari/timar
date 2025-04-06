@@ -171,7 +171,7 @@ class TimarBot:
         context: ContextTypes.DEFAULT_TYPE,
     ) -> None:
         chat_id = update.effective_chat.id
-        tasks = db.task_repo.get_by_chat_id(chat_id)
+        tasks = db.task_repo.get_undone_by_chat_id(chat_id)
         if not tasks:
             await self.send_message(
                 context,
