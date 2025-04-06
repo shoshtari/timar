@@ -363,6 +363,7 @@ class TimarBot:
                 ),
                 callback_consts.DELETE_TASK.copy().add_metadata(metadata=metadata),
                 callback_consts.START_TASK_TIMER.copy().add_metadata(metadata=metadata),
+                callback_consts.END_TASK.copy().add_metadata(metadata=metadata),
             ],
             chat_id,
         )
@@ -699,7 +700,12 @@ class TimarBot:
                     data["epic_id"],
                     data["column"],
                 )
-
+            case callback_consts.END_TASK:
+                await self.send_message(
+                    context,
+                    chat_id=update.effective_chat.id,
+                    text="Not implemented yet!",
+                )
             case _:
                 logger.warning(f"Unknown action {data['action']}")
 
