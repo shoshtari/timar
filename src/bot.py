@@ -585,6 +585,20 @@ class TimarBot:
             text=message_consts.EPIC_EDITED,
         )
 
+    async def handle_end_task(
+        self,
+        context: ContextTypes.DEFAULT_TYPE,
+        chat_id: int,
+        task_id: int,
+    ) -> None:
+
+        db.task_repo.edit(task_id, "done", True)
+        await self.send_message(
+            context,
+            chat_id=chat_id,
+            text=message_consts.TASK_ENDED,
+        )
+
     async def handle_state(
         self,
         update: Update,
@@ -701,10 +715,10 @@ class TimarBot:
                     data["column"],
                 )
             case callback_consts.END_TASK:
-                await self.send_message(
+                await self.handle_end_task(
                     context,
-                    chat_id=update.effective_chat.id,
-                    text="Not implemented yet!",
+                    update.effective_chat.id,
+                    data["task_id"],
                 )
             case _:
                 logger.warning(f"Unknown action {data['action']}")

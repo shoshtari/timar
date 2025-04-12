@@ -98,4 +98,7 @@ GET_INPUT_FOR_EPIC_EDIT = """
 """.strip()
 EPIC_EDITED = """
 اپیک با موفقیت ویرایش شد.
-"""
+""".strip()
+TASK_ENDED = """
+تسک اتمام پذیرفت
+""".strip()
