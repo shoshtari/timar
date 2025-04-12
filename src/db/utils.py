@@ -26,5 +26,4 @@ def add_column_if_not_exists(
         sqlite_conn.commit()
 
     except Exception as e:
-        print("SSSSSSSSSS")
         raise e

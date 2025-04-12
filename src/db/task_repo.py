@@ -136,7 +136,7 @@ DELETE FROM task WHERE id = ?
         self.sqlitedb.commit()
 
     def edit(self, id: int, col: str, value: str) -> None:
-        if col not in ("name", "description"):
+        if col not in ("name", "description", "done"):
             raise ValueError(f"invalid column: {col}")
         stmt = f"UPDATE task SET {col} = ? WHERE id = ?"
         self.sqlitedb.execute(stmt, (value, id))
