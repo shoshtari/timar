@@ -3,7 +3,7 @@ import json
 import logging
 import time
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from telegram import Message, ReplyKeyboardMarkup, Update
 from telegram.ext import (
@@ -462,12 +462,15 @@ class TimarBot:
         self,
         update: Update,
         context: ContextTypes.DEFAULT_TYPE,
-        callback_data: Optional[dict] = None,
+        callback_data: Optional[Dict[str, Any]] = None,
     ) -> None:
         if callback_data is None:
+            if update.callback_query is None or update.callback_query.data is None:
+                raise ValueError("No callback data available")
             callback_data = json.loads(update.callback_query.data)
-        task_id = callback_data["task_id"]
-        task_name = callback_data["task_name"]
+
+        task_id = int(callback_data["task_id"])
+        task_name = str(callback_data["task_name"])
         start_time = datetime.now()
         timelog_id = db.timelog_repo.create(task_id, start_time)
         buttons = [
@@ -628,6 +631,8 @@ class TimarBot:
         update: Update,
         context: ContextTypes.DEFAULT_TYPE,
     ) -> None:
+        if update.message is None:
+            raise ValueError("Handle message called on an update without text")
         match update.message.text:
             case "/start" | "منوی اصلی":
                 await self.handle_start_command(update, context)
@@ -654,10 +659,14 @@ class TimarBot:
     ) -> None:
         logger.debug("new callback query recieved")
         query = update.callback_query
+        if not query or not query.data:
+            raise ValueError("Callback query is None")
+
         try:
             data = json.loads(query.data)
         except Exception as error:
             logger.error(f"Error parsing callback data: {error =}, {query.data}")
+            return
         match data["action"]:
             case callback_consts.EPICS_MANAGEMENT:
                 await self.handle_epic_management(update, context)
@@ -725,9 +734,11 @@ class TimarBot:
 
     def run(self, poll_interval: float) -> None:
 
+        if self.application.job_queue is None:
+            raise ValueError("Job queue is None")
         self.application.job_queue.run_repeating(
             job.update_in_progress_time_logs,
-            interval=1,
+            interval=10,
             first=0,
         )
         self.application.run_polling(poll_interval=poll_interval)
